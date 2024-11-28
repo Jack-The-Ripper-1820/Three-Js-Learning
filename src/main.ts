@@ -2,20 +2,22 @@ import './style.css'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import Stats from 'three/addons/libs/stats.module.js'
+import { GUI } from 'lil-gui'
 
 const scene = new THREE.Scene()
+scene.add(new THREE.AxesHelper(10))
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
-camera.position.z = 1.5
+camera.position.set(1, 2, 3)
 
 const renderer = new THREE.WebGLRenderer()
 renderer.setSize(window.innerWidth, window.innerHeight)
 document.body.appendChild(renderer.domElement)
 
 window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight
-  camera.updateProjectionMatrix()
-  renderer.setSize(window.innerWidth, window.innerHeight)
+    camera.aspect = window.innerWidth / window.innerHeight
+    camera.updateProjectionMatrix()
+    renderer.setSize(window.innerWidth, window.innerHeight)
 })
 
 new OrbitControls(camera, renderer.domElement)
@@ -29,20 +31,36 @@ scene.add(cube)
 const stats = new Stats()
 document.body.appendChild(stats.dom)
 
-const clock = new THREE.Clock()
-let delta
+const gui = new GUI()
+
+const cubeFolder = gui.addFolder('Cube')
+cubeFolder.add(cube, 'visible')
+cubeFolder.open()
+
+const positionFolder = cubeFolder.addFolder('Position')
+positionFolder.add(cube.position, 'x', -5, 5)
+positionFolder.add(cube.position, 'y', -5, 5)
+positionFolder.add(cube.position, 'z', -5, 5)
+positionFolder.open()
+
+const rotationFolder = cubeFolder.addFolder('Rotation')
+rotationFolder.add(cube.rotation, 'x', 0, Math.PI * 2)
+rotationFolder.add(cube.rotation, 'y', 0, Math.PI * 2)
+rotationFolder.add(cube.rotation, 'z', 0, Math.PI * 2)
+rotationFolder.open()
+
+const scaleFolder = cubeFolder.addFolder('Scale')
+scaleFolder.add(cube.scale, 'x', -5, 5)
+scaleFolder.add(cube.scale, 'y', -5, 5)
+scaleFolder.add(cube.scale, 'z', -5, 5)
+scaleFolder.open()
 
 function animate() {
-  requestAnimationFrame(animate) // will queue the function for the another call in next frame
+    requestAnimationFrame(animate)
 
-  delta = clock.getDelta()
+    renderer.render(scene, camera)
 
-  cube.rotation.x += delta
-  cube.rotation.y += delta
-
-  renderer.render(scene, camera)
-
-  stats.update()
+    stats.update()
 }
 
 animate()
