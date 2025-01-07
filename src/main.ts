@@ -49,8 +49,8 @@ class Pickable extends Mesh {
   }
 
   update(delta: number) {
-    //this.rotation.x += delta / 2
-    //this.rotation.y += delta / 2
+    this.rotation.x += delta / 2
+    this.rotation.y += delta / 2
 
     // console.log(this.position.y)
 
