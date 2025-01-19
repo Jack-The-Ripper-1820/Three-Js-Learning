@@ -15,5 +15,8 @@
     "three": "^0.169.0",
     "typescript": "^5.5.3",
     "vite": "^5.4.8"
+  },
+  "dependencies": {
+    "@gltf-transform/cli": "^4.1.1"
   }
 }

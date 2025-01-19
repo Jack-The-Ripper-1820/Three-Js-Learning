@@ -3,12 +3,105 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
 import Stats from 'three/addons/libs/stats.module.js'
 
-const scene = new THREE.Scene()
+class CharacterController {
+  keyMap: { [key: string]: boolean } = {}
+  wait = false
+  animationActions: { [key: string]: THREE.AnimationAction }
+  activeAction = ''
+  speed = 0
 
-const gridHelper = new THREE.GridHelper(100, 100)
-scene.add(gridHelper)
+  constructor(animationActions: { [key: string]: THREE.AnimationAction }) {
+    this.animationActions = animationActions
+    document.addEventListener('keydown', this.onDocumentKey)
+    document.addEventListener('keyup', this.onDocumentKey)
+  }
+
+  onDocumentKey = (e: KeyboardEvent) => {
+    this.keyMap[e.code] = e.type === 'keydown'
+  }
+
+  dispose() {
+    document.removeEventListener('keydown', this.onDocumentKey)
+    document.removeEventListener('keyup', this.onDocumentKey)
+  }
+
+  setAction(action: string) {
+    if (this.activeAction != action) {
+      this.animationActions[this.activeAction].fadeOut(0.25)
+      this.animationActions[action].reset().fadeIn(0.25).play()
+      this.activeAction = action
+
+      switch (action) {
+        case 'walk':
+          this.speed = 1
+          break
+        case 'run':
+        case 'jump':
+          this.speed = 4
+          break
+        case 'pose':
+        case 'idle':
+          this.speed = 0
+          break
+      }
+    }
+  }
+
+  update() {
+    if (!this.wait) {
+      let actionAssigned = false
+
+      if (this.keyMap['Space']) {
+        this.setAction('jump')
+        actionAssigned = true
+        this.wait = true // blocks further actions until jump is finished
+        setTimeout(() => (this.wait = false), 1000)
+      }
+
+      if (!actionAssigned && this.keyMap['KeyW'] && this.keyMap['ShiftLeft']) {
+        this.setAction('run')
+        actionAssigned = true
+      }
+
+      if (!actionAssigned && this.keyMap['KeyW']) {
+        this.setAction('walk')
+        actionAssigned = true
+      }
+
+      if (!actionAssigned && this.keyMap['KeyQ']) {
+        this.setAction('pose')
+        actionAssigned = true
+      }
+
+      !actionAssigned && this.setAction('idle')
+    }
+  }
+}
+
+class Grid {
+  gridHelper = new THREE.GridHelper(100, 100)
+  speed = 0
+
+  constructor(scene: THREE.Scene) {
+    scene.add(this.gridHelper)
+  }
+
+  lerp(from: number, to: number, speed: number) {
+    const amount = (1 - speed) * from + speed * to
+    return Math.abs(from - to) < 0.001 ? to : amount
+  }
+
+  update(delta: number, toSpeed: number) {
+    this.speed = this.lerp(this.speed, toSpeed, delta * 10)
+    this.gridHelper.position.z -= this.speed * delta
+    this.gridHelper.position.z = this.gridHelper.position.z % 10
+  }
+}
+
+const scene = new THREE.Scene()
 
 new RGBELoader().load('img/venice_sunset_1k.hdr', (texture) => {
   texture.mapping = THREE.EquirectangularReflectionMapping
@@ -37,55 +130,50 @@ controls.target.set(0, 0.75, 0)
 const stats = new Stats()
 document.body.appendChild(stats.dom)
 
-function lerp(from: number, to: number, speed: number) {
-  const amount = (1 - speed) * from + speed * to
-  return Math.abs(from - to) < 0.001 ? to : amount
-}
-
 let mixer: THREE.AnimationMixer
 let animationActions: { [key: string]: THREE.AnimationAction } = {}
-let activeAction: THREE.AnimationAction
-let speed = 0, toSpeed = 0
 
-// new GLTFLoader().load('models/eve$@walk.glb', (gltf) => {
-//     mixer = new THREE.AnimationMixer(gltf.scene)
-//     console.log(gltf  )
+const characterController = new CharacterController(animationActions)
+const grid = new Grid(scene)
 
-//     mixer.clipAction(gltf.animations[0]).play()
+const dracoLoader = new DRACOLoader()
+// dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/') // loading from a CDN
+dracoLoader.setDecoderPath('jsm/libs/draco/') // loading from own webserver
+
+const glTFLoader = new GLTFLoader()
+glTFLoader.setDRACOLoader(dracoLoader)
+
+// glTFLoader.load('models/eve$@walk_compressed.glb', (gltf) => {
+//   mixer = new THREE.AnimationMixer(gltf.scene)
+
+//   mixer.clipAction(gltf.animations[0]).play()
 
 //   scene.add(gltf.scene)
 // })
 
 async function loadEve() {
-  const loader = new GLTFLoader()
-  const [eve, idle, run] = await Promise.all([
-    loader.loadAsync('models/eve$@walk.glb'),
-    loader.loadAsync('models/eve@idle.glb'),
-    loader.loadAsync('models/eve@run.glb')
+  const [eve, idle, run, jump, pose] = await Promise.all([
+    glTFLoader.loadAsync('models/eve$@walk_compressed.glb'),
+    glTFLoader.loadAsync('models/eve@idle.glb'),
+    glTFLoader.loadAsync('models/eve@run.glb'),
+    glTFLoader.loadAsync('models/eve@jump.glb'),
+    glTFLoader.loadAsync('models/eve@pose.glb')
   ])
 
   mixer = new THREE.AnimationMixer(eve.scene)
 
-  // mixer.clipAction(idle.animations[0]).play()
-
   animationActions['idle'] = mixer.clipAction(idle.animations[0])
   animationActions['walk'] = mixer.clipAction(eve.animations[0])
   animationActions['run'] = mixer.clipAction(run.animations[0])
+  animationActions['jump'] = mixer.clipAction(jump.animations[0])
+  animationActions['pose'] = mixer.clipAction(pose.animations[0])
 
   animationActions['idle'].play()
-  activeAction = animationActions['idle']
+  characterController.activeAction = 'idle'
 
   scene.add(eve.scene)
 }
 await loadEve()
-
-const keyMap: { [key: string]: boolean } = {}
-
-const onDocumentKey = (e: KeyboardEvent) => {
-  keyMap[e.code] = e.type === 'keydown'
-}
-document.addEventListener('keydown', onDocumentKey, false)
-document.addEventListener('keyup', onDocumentKey, false)
 
 const clock = new THREE.Clock()
 let delta = 0
@@ -97,39 +185,11 @@ function animate() {
 
   controls.update()
 
+  characterController.update()
+
   mixer && mixer.update(delta)
 
-  if (keyMap['KeyW']) {
-    if (keyMap['ShiftLeft']) {
-      //run
-      if (activeAction != animationActions['run']) {
-        activeAction.fadeOut(0.5)
-        animationActions['run'].reset().fadeIn(0.25).play()
-        activeAction = animationActions['run']
-        toSpeed = 4
-      }
-    } else {
-      //walk
-      if (activeAction != animationActions['walk']) {
-        activeAction.fadeOut(0.5)
-        animationActions['walk'].reset().fadeIn(0.25).play()
-        activeAction = animationActions['walk']
-        toSpeed = 1
-      }
-    }
-  } else {
-    //idle
-    if (activeAction != animationActions['idle']) {
-      activeAction.fadeOut(0.5)
-      animationActions['idle'].reset().fadeIn(0.25).play()
-      activeAction = animationActions['idle']
-      toSpeed = 0
-    }
-  }
-
-  speed = lerp(speed, toSpeed, delta * 10)
-  gridHelper.position.z -= speed * delta
-  gridHelper.position.z = gridHelper.position.z % 10
+  grid.update(delta, characterController.speed)
 
   renderer.render(scene, camera)
 
