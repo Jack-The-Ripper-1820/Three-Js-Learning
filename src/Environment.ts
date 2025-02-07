@@ -1,4 +1,4 @@
-import { CameraHelper, DirectionalLight, EquirectangularReflectionMapping, GridHelper, Scene, TextureLoader } from 'three'
+import { DirectionalLight, EquirectangularReflectionMapping, Scene, TextureLoader } from 'three'
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js'
 import { Lensflare, LensflareElement } from 'three/addons/objects/Lensflare.js'
 
@@ -9,15 +9,13 @@ export default class Environment {
   constructor(scene: Scene) {
     this.scene = scene
 
-    this.scene.add(new GridHelper(50, 50))
-
     this.light = new DirectionalLight(0xffffff, Math.PI)
     this.light.position.set(65.7, 19.2, 50.2)
     this.light.castShadow = true
     this.scene.add(this.light)
 
-    const directionalLightHelper = new CameraHelper(this.light.shadow.camera)
-    this.scene.add(directionalLightHelper)
+    // const directionalLightHelper = new CameraHelper(this.light.shadow.camera)
+    // this.scene.add(directionalLightHelper)
 
     const textureLoader = new TextureLoader()
     const textureFlare0 = textureLoader.load('img/lensflare0.png')
