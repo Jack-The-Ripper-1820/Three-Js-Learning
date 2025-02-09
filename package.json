@@ -3,15 +3,18 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "homepage": "https://raiden-02.github.io//",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "predeploy": "npm run build",
     "deploy": "vite build && gh-pages -d dist"
   },
   "devDependencies": {
     "@dimforge/rapier3d-compat": "^0.14.0",
     "@types/three": "^0.169.0",
+    "gh-pages": "^6.3.0",
     "jeasings": "^0.0.16",
     "lil-gui": "^0.19.2",
     "three": "^0.169.0",
@@ -20,7 +23,6 @@
     "vite-plugin-top-level-await": "^1.4.4"
   },
   "dependencies": {
-    "@gltf-transform/cli": "^4.1.1",
-    "gh-pages": "^6.3.0"
+    "@gltf-transform/cli": "^4.1.1"
   }
 }
